@@ -1,0 +1,309 @@
+{
+  "name": "tabnest",
+  "displayName": "TabNest",
+  "description": "Organize opened editors into logical groups in Explorer view",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tabNest.organizeNow",
+        "title": "TabNest: Organize Open Editors"
+      },
+      {
+        "command": "tabNest.aiOrganizeNow",
+        "title": "TabNest: AI Auto Organize",
+        "icon": {
+          "light": "media/ai-organize-light.svg",
+          "dark": "media/ai-organize-dark.svg"
+        }
+      },
+      {
+        "command": "tabNest.moveActiveToGroup",
+        "title": "TabNest: Move Active Editor To Group"
+      },
+      {
+        "command": "tabNest.moveOpenToGroup",
+        "title": "TabNest: Move Open Editor To Group",
+        "icon": {
+          "light": "media/add-group-light.svg",
+          "dark": "media/add-group-dark.svg"
+        }
+      },
+      {
+        "command": "tabNest.removeOpenFromGroup",
+        "title": "TabNest: Remove Open Editor From Group",
+        "icon": {
+          "light": "media/delete-group-light.svg",
+          "dark": "media/delete-group-dark.svg"
+        }
+      },
+      {
+        "command": "tabNest.addGroup",
+        "title": "TabNest: Add Group",
+        "icon": {
+          "light": "media/add-group-light.svg",
+          "dark": "media/add-group-dark.svg"
+        }
+      },
+      {
+        "command": "tabNest.renameGroup",
+        "title": "TabNest: Rename Group"
+      },
+      {
+        "command": "tabNest.deleteGroup",
+        "title": "TabNest: Delete Group",
+        "icon": {
+          "light": "media/delete-group-light.svg",
+          "dark": "media/delete-group-dark.svg"
+        }
+      },
+      {
+        "command": "tabNest.searchOpenEditors",
+        "title": "TabNest: Search Open Editors",
+        "icon": {
+          "light": "media/search-light.svg",
+          "dark": "media/search-dark.svg"
+        }
+      },
+      {
+        "command": "tabNest.clearSearch",
+        "title": "TabNest: Clear Search",
+        "icon": {
+          "light": "media/clear-search-light.svg",
+          "dark": "media/clear-search-dark.svg"
+        }
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "tabNest.openEditors",
+          "name": "TabNest Groups"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "tabNest.searchOpenEditors",
+          "when": "view == tabNest.openEditors",
+          "group": "search@1"
+        },
+        {
+          "command": "tabNest.clearSearch",
+          "when": "view == tabNest.openEditors",
+          "group": "search@2"
+        },
+        {
+          "command": "tabNest.addGroup",
+          "when": "view == tabNest.openEditors",
+          "group": "navigation"
+        },
+        {
+          "command": "tabNest.aiOrganizeNow",
+          "when": "view == tabNest.openEditors",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tabNest.deleteGroup",
+          "when": "view == tabNest.openEditors",
+          "group": "manage@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "tabNest.addGroup",
+          "when": "view == tabNest.openEditors && (viewItem == tabNestGroupCustom || viewItem == tabNestGroupBuiltIn)",
+          "group": "inline@1"
+        },
+        {
+          "command": "tabNest.deleteGroup",
+          "when": "view == tabNest.openEditors && viewItem == tabNestGroupCustom",
+          "group": "inline"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "tabNest.renameGroup",
+        "key": "enter",
+        "when": "listFocus && focusedView == tabNest.openEditors && !inputFocus"
+      },
+      {
+        "command": "list.expand",
+        "key": "right",
+        "when": "listFocus && view == tabNest.openEditors"
+      },
+      {
+        "command": "list.collapse",
+        "key": "left",
+        "when": "listFocus && view == tabNest.openEditors"
+      },
+      {
+        "command": "tabNest.addGroup",
+        "key": "cmd+a",
+        "when": "listFocus && view == tabNest.openEditors && listHasSelection"
+      },
+      {
+        "command": "tabNest.deleteGroup",
+        "key": "cmd+d",
+        "when": "listFocus && view == tabNest.openEditors && listHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "TabNest",
+      "properties": {
+        "tabNest.autoOrganize": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically organize editors when tabs change."
+        },
+        "tabNest.strategy": {
+          "type": "string",
+          "enum": [
+            "preset",
+            "custom"
+          ],
+          "default": "preset",
+          "description": "Use built-in preset grouping or custom regex rules."
+        },
+        "tabNest.debounceMs": {
+          "type": "number",
+          "default": 800,
+          "minimum": 200,
+          "description": "Debounce time for auto organize in milliseconds."
+        },
+        "tabNest.rules": {
+          "type": "array",
+          "description": "Rules to map files into target logical groups (1-based).",
+          "default": [
+            {
+              "name": "Tests",
+              "regex": "^(test|__tests__)/|\\.test\\.",
+              "targetGroup": 2
+            },
+            {
+              "name": "Docs",
+              "regex": "\\.md$",
+              "targetGroup": 3
+            }
+          ],
+          "markdownDescription": "Used only when `tabNest.strategy` is `custom`.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "regex",
+              "targetGroup"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "regex": {
+                "type": "string"
+              },
+              "targetGroup": {
+                "type": "number",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "tabNest.aiEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AI classification for files that do not match regex rules."
+        },
+        "tabNest.aiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key used for AI classification requests."
+        },
+        "tabNest.aiModel": {
+          "type": "string",
+          "default": "gpt-4.1-mini",
+          "description": "Model used for AI classification."
+        },
+        "tabNest.aiBaseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Base URL for the AI API (without trailing slash preferred)."
+        },
+        "tabNest.aiAuthMode": {
+          "type": "string",
+          "enum": [
+            "bearer",
+            "api-key",
+            "x-api-key"
+          ],
+          "default": "bearer",
+          "description": "Authentication header mode for AI requests. Use api-key or x-api-key for some OpenAI-compatible gateways."
+        },
+        "tabNest.aiTimeoutMs": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 1000,
+          "description": "Timeout for each AI classification request in milliseconds."
+        },
+        "tabNest.aiSystemPrompt": {
+          "type": "string",
+          "default": "You classify file paths into one category: project, tests, docs, temp. Reply with only one category token.",
+          "description": "System prompt for AI classifier."
+        },
+        "tabNest.aiUserPromptTemplate": {
+          "type": "string",
+          "default": "Classify this file path.\\nPath: {{path}}\\nOutput one token only: project | tests | docs | temp",
+          "description": "User prompt template for AI classifier. Use {{path}} as placeholder."
+        },
+        "tabNest.aiAllowFileContent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow AI workflow to read a short preview of file content for better grouping."
+        },
+        "tabNest.aiContentPreviewChars": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "maximum": 4000,
+          "description": "Maximum characters read from each file when AI content preview is enabled."
+        },
+        "tabNest.aiMaxGroups": {
+          "type": "number",
+          "default": 6,
+          "minimum": 2,
+          "maximum": 12,
+          "description": "Upper bound for number of groups AI can create in AI Auto Organize."
+        },
+        "tabNest.confirmDeleteGroup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show confirmation before deleting a custom group."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "langchain": "^1.2.36",
+    "openai": "^6.32.0"
+  }
+}
