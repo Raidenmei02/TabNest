@@ -1,6 +1,18 @@
-# TabNest (MVP)
+# TabNest
 
-A minimal VS Code extension that organizes opened editors into logical groups shown only in Explorer (`TabNest Groups` view).
+TabNest is a VS Code extension that organizes opened editors into logical groups in Explorer view (`TabNest Groups`).
+
+It does not create VS Code split editor groups. Grouping is a logical layer for navigation and focus.
+
+## Features
+
+- Logical groups with one built-in group: `Ungrouped`.
+- Folder-like hierarchy inside each logical group.
+- Search in `TabNest Groups` by filename or path keywords.
+- Drag and drop support:
+  - Drag editor items between TabNest groups.
+  - Drag files from Explorer into a TabNest group.
+- Persisted custom groups and assignments in workspace state.
 
 ## Commands
 
@@ -10,78 +22,90 @@ A minimal VS Code extension that organizes opened editors into logical groups sh
 - `TabNest: Move Open Editor To Group`
 - `TabNest: Remove Open Editor From Group`
 - `TabNest: Add Group`
+- `TabNest: Rename Group`
 - `TabNest: Delete Group`
 - `TabNest: Search Open Editors`
 - `TabNest: Clear Search`
 
-## Drag into groups
+## Group Management
 
-- Open Explorer and use the `TabNest Groups` view.
-- Drag an opened file item to another group node to re-assign its logical group.
-- Drag files from Explorer into a group node to assign them into that logical group.
-- These groups are visualized only in `TabNest Groups` and do not create VS Code editor splits.
+- `Ungrouped` is built-in and cannot be renamed or deleted.
+- Deleting a custom group moves its files back to `Ungrouped`.
+- Group rename enforces non-empty and unique names.
 
-## Settings
+## Organization Modes
 
-- `tabNest.autoOrganize`: enable automatic organization on tab changes.
-- `tabNest.strategy`: `preset` or `custom`.
-- `tabNest.debounceMs`: debounce interval in ms for auto mode.
-- `tabNest.rules`: regex routing rules (used only in `custom` mode), each with 1-based `targetGroup`.
-- `tabNest.aiEnabled`: enable AI fallback classification for files not matched by rules.
-- `tabNest.aiApiKey`: API key used for AI classification requests.
-- `tabNest.aiModel`: model used for classification (default `gpt-4.1-mini`).
-- `tabNest.aiBaseUrl`: API base URL (default `https://api.openai.com/v1`).
-- `tabNest.aiTimeoutMs`: timeout per AI request in milliseconds.
-- `tabNest.aiSystemPrompt`: system prompt used by AI classifier.
-- `tabNest.aiUserPromptTemplate`: user prompt template, supports `{{path}}`.
-- `tabNest.aiAllowFileContent`: allow AI workflow to read short file content previews.
-- `tabNest.aiContentPreviewChars`: max chars per file for content preview.
-- `tabNest.aiMaxGroups`: max number of groups AI can create in AI Auto Organize.
-- `tabNest.confirmDeleteGroup`: whether deleting a custom group asks for confirmation.
+### 1) Rule-based organize
 
-## Prompt examples
+Run `TabNest: Organize Open Editors`.
 
-- system prompt (strict):
-  `Classify file paths into exactly one token: project, tests, docs, temp. Reply with only one token.`
-- user prompt template (path first):
-  `Path: {{path}}\nChoose one token only: project | tests | docs | temp`
-- user prompt template (docs-biased):
-  `Path: {{path}}\nIf path is markdown, docs folder, ADR, RFC, or guide, choose docs. Otherwise choose the best token among project/tests/docs/temp.`
+- Rules come from:
+  - `tabNest.strategy = preset` (built-in rules), or
+  - `tabNest.strategy = custom` with `tabNest.rules`.
+- Files that do not match rules can optionally use AI fallback classification (if enabled).
 
-## AI run visibility
+### 2) AI workflow organize
 
-- During organize, status bar shows: `TabNest: organizing...`
-- After organize, status bar shows one of:
-  - `TabNest AI: not called`
-  - `TabNest AI: missing key`
-  - `TabNest AI: api X, cache Y, fail Z`
-- Detailed per-run stats are written to Output panel channel: `TabNest`.
-- Logs now include failure reason details:
-  - `reason_counts=disabled/missing_key/cache_hit/api_success/api_failed/invalid_response`
-  - `ai_failure_samples` lines with `target`, plus `status/error/response/model/base`.
+Run `TabNest: AI Auto Organize`.
 
-## AI workflow (AI Auto Organize)
-
-- `TabNest: AI Auto Organize` now uses a workflow:
-  - Reads open editor file paths and file names.
-  - Optionally reads short file content previews (`tabNest.aiAllowFileContent`).
-  - Asks AI to create group names and assign each file to one group.
-  - Creates missing groups automatically and applies assignments.
+- Collects open files (path + label).
+- Optionally reads short file content previews.
+- Asks AI to propose group names and per-file assignments.
+- Creates missing groups automatically and applies assignments.
 
 ## Preset Strategy
 
-When `tabNest.strategy = preset`, files are grouped like this:
+When `tabNest.strategy = preset`, built-in rule targets are:
 
-- Group 1: project files (default, unmatched)
-- Group 2: tests (`test/`, `__tests__/`, `*.test.*`, `*.spec.*`, etc.)
-- Group 3: docs (`docs/`, `guide/`, `*.md`, `*.mdx`, etc.)
-- Group 4: temp (`untitled`, `tmp/`, `scratch/`, `*.tmp`, `*.log`, etc.)
+- Group 1: `Ungrouped` (default for unmatched files)
+- Group 2: tests (`test`, `tests`, `__tests__`, `*.test.*`, `*.spec.*`)
+- Group 3: docs (`doc`, `docs`, `guide`, `adr`, `*.md`, `*.mdx`, `*.rst`, `*.txt`)
+- Group 4: temp (`untitled:`, `tmp`, `temp`, `scratch`, `draft`, `*.tmp`, `*.log`)
 
-## Run locally
+## Settings
+
+General:
+
+- `tabNest.autoOrganize` (`boolean`, default: `false`)
+- `tabNest.strategy` (`preset | custom`, default: `preset`)
+- `tabNest.debounceMs` (`number`, default: `800`, minimum: `200`)
+- `tabNest.rules` (`RuleConfig[]`, used only when strategy is `custom`)
+- `tabNest.confirmDeleteGroup` (`boolean`, default: `true`)
+
+AI:
+
+- `tabNest.aiEnabled` (`boolean`, default: `false`)
+- `tabNest.aiApiKey` (`string`, default: empty)
+- `tabNest.aiModel` (`string`, default: `gpt-4.1-mini`)
+- `tabNest.aiBaseUrl` (`string`, default: `https://api.openai.com/v1`)
+- `tabNest.aiAuthMode` (`bearer | api-key | x-api-key`, default: `bearer`)
+- `tabNest.aiTimeoutMs` (`number`, default: `8000`, minimum: `1000`)
+- `tabNest.aiSystemPrompt` (`string`)
+- `tabNest.aiUserPromptTemplate` (`string`, supports `{{path}}`)
+- `tabNest.aiAllowFileContent` (`boolean`, default: `false`)
+- `tabNest.aiContentPreviewChars` (`number`, default: `500`, range: `100-4000`)
+- `tabNest.aiMaxGroups` (`number`, default: `6`, range: `2-12`)
+
+## AI Status and Logs
+
+- During organize, status bar shows running progress and counters.
+- After organize, status bar summarizes:
+  - tabs seen
+  - rule matches
+  - AI checked / assigned / success / cache / failures
+- Output channel `TabNest` includes detailed run logs, including reason counts and failure samples.
+
+## Local Development
 
 ```bash
 npm install
 npm run compile
 ```
 
-Press `F5` in VS Code to launch Extension Development Host.
+Optional watch mode:
+
+```bash
+npm run watch
+```
+
+Then press `F5` in VS Code to launch Extension Development Host.
